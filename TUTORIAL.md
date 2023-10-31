@@ -1,19 +1,18 @@
 # Remix Server-Sent Events Workshop
 
-The goal of this tutorial is to explore using Server-Sent events to deliver
-real-time updates from the server using Remix. We will build a collaborative
-Todo app.
+The aim of this tutorial is to explore using Server-Sent events to deliver
+real-time updates from the server with Remix. We will build a collaborative Todo
+app.
 
 This tutorial will walk you through building this app one piece at a time. Each
 major section will have a "snapshot" saved as a new branch in case you get lost
-or want to compare where you're at. There will be a code snippet under each
-heading that you can use to switch to the branch, which will contain the code in
-the state it should be at the beginning of that section.
+or want to compare where you're at. Each heading will contain a code snippet
+that you can use to switch to the respective branch.
 
-If you'd like to work it out by yourself or you don't have `git` installed or
-aren't comfortable with `git`, that's okay! The instructions assume that you're
-working from this repository, but you can easily follow along without needing to
-clone this repository.
+If you prefer to work independently or if you don't have `git` installed, or if
+you're not comfortable with `git`, that's okay! The instructions assume that
+you're working from this repository, but you can easily follow along without
+needing to clone this repository.
 
 ## Clone this repo
 
@@ -23,7 +22,7 @@ you can use this:
 ```sh
 git clone git@github.com:ksmithut/remix-sse-workshop.git
 # or the https version
-git clone https://github.com/ksmithut/remix-see-workshop.git
+git clone https://github.com/ksmithut/remix-sse-workshop.git
 ```
 
 Then open up the project in your preferred code editor. You'll need to keep a
@@ -36,16 +35,15 @@ git switch main
 ```
 
 First things first, we've got to start a remix project. We'll start from one of
-my templates. It's based on one of the original basic stack templates (that I
-can't seem to find on the remix website anymore???). It's got a few things
-preconfigured:
+my templates. It's based on one of the original basic stack templates that was
+provided on the Remix website. It's got a few things preconfigured:
 
 - typescript
 - tailwindcss
 - prettier
 - installed `clsx`
 
-If you decide to go with your own starter or template, that's totally fine.
+If you decide to go with your own starter or template, that's perfectly fine.
 You'll be on your own to translate this tutorial to your preferences, but it
 shouldn't be too difficult. If you're using JavaScript (and not wanting to go
 down the jsdoc route) you can remove all the type annotations and rename all the
@@ -63,7 +61,7 @@ npx create-remix@latest --template ksmithut/remix-templates/ksmithut .
 ```
 
 If you're not working from a clone of this repository, you can run this command
-(without the `.`) and work through the prompts:
+without the `.` at the end of the command, and work through the prompts:
 
 ```sh
 npx create-remix@latest --template ksmithut/remix-templates/ksmithut
@@ -94,18 +92,20 @@ multiplayer game, Server-Sent Events work great.
 
 ## Protocol
 
-Server-Sent Events has a very simple protocol. It's over HTTP so no need to do a
-handoff or connection upgrade like with WebSockets. The `Content-Type` of and
-endpoint supporting Server-Send Events is `text/event-stream`. It's also a good
-(maybe required) idea to set the `Cache-Control` header to `no-cache, no-store`
-to prevent browsers and proxies from caching the response.
+Server-Sent Events has a very simple protocol. It's over HTTP, so there is no
+need to do a handoff or connection upgrade like with WebSockets. The
+`Content-Type` of an endpoint supporting Server-Send Events is
+`text/event-stream`. It's also a good idea, possibly required, to set the
+`Cache-Control` header to `no-cache, no-store` to prevent browsers and proxies
+from caching the response. Typically these endpoints are used for new events and
+you don't want old events cached anywhere.
 
 The key lies in the structure of the response body. In normal HTTP responses,
 you get the headers, then a body, then the response ends. With Server-Sent
 Events, you get the body but the response does not end. It maintains the
-connection (much like WebSockets). Each "event" is separated by two newlines,
-and each line as a prefix to signify other metadata about the event. Here's an
-example Server-Sent Event HTTP response (the first 3 lines are a part of the
+connection (much like WebSockets). Each 'event' is separated by two newlines,
+with each line having a prefix to signify other metadata about the event. Here's
+an example Server-Sent Event HTTP response (the first 3 lines are a part of the
 response headers):
 
 ```
@@ -164,7 +164,7 @@ optional:
 
       This is another line.
 
-_Note_ According to the spec, a single space after the `:` will be ignored.
+**Note**: According to the spec, a single space after the `:` will be ignored.
 
 If the line prefix is not one of the above, the line will just be ignored. If
 you want to emit a "comment", you can just put a `:` at the beginning of the
@@ -173,18 +173,18 @@ and clients to process bytes, which can prevent proxie and clients from
 unexpectedly closing the connection due to inactivity.
 
 To see this in action (for the duration of this workshop), make a request to
-[https://sse.ksmithut.dev](https://sse.ksmithut.dev). You can visit in your
-browser or some other HTTP client. If you have `curl`, you can use the following
-command.
+[https://sse.ksmithut.dev](https://sse.ksmithut.dev). You can visit it in your
+browser or in any other HTTP client. If you have `curl`, you can use the
+following command.
 
 ```sh
 curl https://sse.ksmithut.dev
 ```
 
-You'll get a welcome message and every 15 seconds or so you'll get `: ka`
-(ka=keep-alive).
+You'll receive a welcome message, and every 15 seconds or so, you'll also
+receive `: ka` (where `ka` stands for keep-alive).
 
-Now to create a new message. You'll need do make a `POST` request to the same
+Now to create a new message. You'll need to make a `POST` request to the same
 URL with a request body. If you're using `curl`, it could look something like
 this:
 
@@ -201,7 +201,7 @@ Or if you open up a node REPL, you could do something like this:
 fetch('https://sse.ksmithut.dev', { method: 'POST', body: 'Hello World' })
 ```
 
-You could also build a simple html page to interact with this endpoint:
+You could also build a simple HTML page to interact with this endpoint:
 
 ```html
 <html>
@@ -291,13 +291,13 @@ instantiate one anywhere (top of the file, top of the function). Then to write
 data to the stream, you need to enqueue a message. We use `setInterval` to send
 the count on the interval.
 
-Now if you make a request to `http://localhost:3000/todos`, you should start
-getting an incrementing number on a new line every second. If you're using
-`curl`, you can cancel the request with `ctrl` + `c`. You'll notice that in the
-the server logs, it's continuing to count. Although we cancelled our request
-from our HTTP client, we didn't put anything in our code to handle that
-cancelled request. The interval continues to run even after the client isn't
-listening to the response anymore.
+If you make a request to http://localhost:3000/todos, you should start receiving
+an incrementing number on a new line every second. If you're using `curl`, you
+can cancel the request with `ctrl` + `c`. You'll notice that in the the server
+logs, it's continuing to count. Although we cancelled our request from our HTTP
+client, we didn't put anything in our code to handle that cancelled request. The
+interval continues to run even after the client isn't listening to the response
+anymore.
 
 In order to properly cancel the request, we need to learn about JavaScript's
 `AbortController`
@@ -347,7 +347,7 @@ ourselves from updating the state.
 To create a new `AbortController`, you use the `new` keyword:
 
 ```js
-const ac = new AbortController()l
+const ac = new AbortController()
 ```
 
 You can pass the signal to `fetch()` calls like this:
@@ -362,7 +362,7 @@ and trigger the abort signal with this:
 ac.abort()
 ```
 
-If a `fetch` call gets aborted, you can check for the error by checking for
+If a `fetch` call gets aborted, you can check for the error by verifying that
 `error.name === 'AbortError'`.
 
 It should look like this now:
@@ -379,7 +379,7 @@ React.useEffect(() => {
       setState((state) => ({ ...state, error }))
     })
   return () => {
-    ac.abort()
+    ac.abort() // This ensures the request is properly canceled
   }
 }, [])
 ```
@@ -429,8 +429,8 @@ clearing the interval and closing the `ReadableStream`. Then we attach the event
 listener for when the event is cancelled. We do need to do an additional check
 if it's already cancelled.
 
-Now let's turn this into a server-sent event endpoint! We've got to change the
-string we send the correct format now as well as add the SSE headers:
+Now, let's convert this into a server-sent event endpoint! We've got to change
+the string we send the correct format now as well as add the SSE headers:
 
 ```ts
 export async function loader({ request }: LoaderFunctionArgs) {
@@ -868,7 +868,10 @@ There may be a better way to do this, but this is a fairly simple
 implementation. First, we'll have a "global" `Set` of close functions, we'll
 append the `close` function for each stream onto this set. We'll also attach an
 event handler for `SIGINT` and `SIGTERM`, which will allow us to cleanly close
-the requests.
+the requests. `SIGINT` and `SIGTERM` are signals that the calling process can
+send to allow our process to exit cleanly. If we don't handle these, it's likely
+that network connections will get terminated abruptly, leading to intermittent
+errors.
 
 ```ts
 const closers = new Set<() => void>()
