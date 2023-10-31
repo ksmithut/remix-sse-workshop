@@ -1159,7 +1159,7 @@ function createTodosStore() {
     get state() {
       return state
     },
-    subscribe(listener: listener) {
+    subscribe(listener: Listener) {
       listeners.add(listener)
       listener({ type: 'init', payload: state })
       return () => {
