@@ -1,34 +1,39 @@
 import React from 'react'
+import type { LoaderFunctionArgs } from '@remix-run/node'
+import { useLoaderData } from '@remix-run/react'
+import todosStore from '../todos/todos.server.ts'
+import { reducer } from '../todos/todos.reducer.ts'
 
-function useMessages() {
-  const [messages, setMessages] = React.useState<string[]>([])
+export async function loader(params: LoaderFunctionArgs) {
+  return { state: todosStore.state }
+}
+
+function useTodos() {
+  const data = useLoaderData<typeof loader>()
+  const [state, dispatch] = React.useReducer(reducer, data.state)
   React.useEffect(() => {
     function handleMessage(event: MessageEvent<string>) {
-      const message = event.data
-      setMessages((messages) => [...messages, message])
+      dispatch(JSON.parse(event.data))
     }
-    // Create an EventSource to listen for server-sent events
-    const eventSource = new EventSource('/todos')
-    // Attach a listener for the 'message' event
-    eventSource.addEventListener('message', handleMessage)
-    // Return a cleanup function
+    const eventStore = new EventSource('/todos')
+    eventStore.addEventListener('message', handleMessage)
     return () => {
-      // Remove the 'message' event listener
-      eventSource.removeEventListener('message', handleMessage)
-      // Close the EventSource connection when the component unmounts
-      eventSource.close()
+      eventStore.removeEventListener('message', handleMessage)
+      eventStore.close()
     }
   }, [])
-  return messages
+  return state
 }
 
 export default function Index() {
-  const messages = useMessages()
+  const { todos } = useTodos()
   return (
     <div>
-      {messages.map((message, index) => (
-        <p key={message + index}>{message}</p>
-      ))}
+      <ul>
+        {todos.map((todo) => (
+          <li key={todo.id}>{todo.label}</li>
+        ))}
+      </ul>
     </div>
   )
 }
